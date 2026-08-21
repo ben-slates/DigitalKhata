@@ -1,0 +1,39 @@
+# Gradle and Android build outputs
+.gradle/
+.gradle-user-home/
+build/
+*/build/
+**/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Local Android SDK and developer-specific configuration
+local.properties
+keystore.properties
+*.jks
+*.keystore
+*.pem
+*.key
+.env
+.env.*
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin and generated files
+.kotlin/
+generated/
+**/generated/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
