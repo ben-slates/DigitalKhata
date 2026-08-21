@@ -9,7 +9,7 @@ build/
 *.ap_
 *.dex
 *.class
-
+keystore.txt
 # Local Android SDK and developer-specific configuration
 local.properties
 keystore.properties
