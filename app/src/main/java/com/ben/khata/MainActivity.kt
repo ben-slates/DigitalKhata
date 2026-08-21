@@ -167,12 +167,12 @@ class MainActivity : ComponentActivity() {
 @Composable private fun Home(vm: KhataViewModel, add: () -> Unit, open: (Long) -> Unit) {
     val paid by vm.total.collectAsState(); val budget by vm.budget.collectAsState(); val recent by vm.recent.collectAsState(); val people by vm.people.collectAsState()
     val remaining = (budget ?: 0) - paid
-    Scaffold(topBar = { AppHeader("Digital Hisab", "Personal payment tracker") }, floatingActionButton = { FloatingActionButton(add) { Icon(Icons.Default.Add, "Add entry") } }) { padding ->
-        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            item { Text("Your money", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+    Scaffold(topBar = { AppHeader("Digital Hisab", "Personal payment tracker") }, floatingActionButton = { FloatingActionButton(add, shape = RoundedCornerShape(16.dp), containerColor = MaterialTheme.colorScheme.primary) { Icon(Icons.Default.Add, "Add entry", tint = MaterialTheme.colorScheme.onPrimary) } }) { padding ->
+        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item { Text("Your money", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold) }
             item { SummaryCard("Total Budget", money(budget ?: 0), Modifier.fillMaxWidth()) }
             item { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { SummaryCard("Total Paid", money(paid), Modifier.weight(1f)); SummaryCard("Remaining", money(remaining), Modifier.weight(1f), if (budget != null && remaining < 0) MaterialTheme.colorScheme.error else null) } }
-            item { Text("Recent entries", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp)) }
+            item { Text("Recent entries", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp)) }
             if (recent.isEmpty()) item { Empty("No entries yet. Tap + to add your first payment.") }
             items(recent, key = { it.id }) { tx -> TransactionCard(tx, people.firstOrNull { p -> p.id == tx.personId }?.name ?: "Person", Modifier.clickable { open(tx.personId) }) }
         }
@@ -184,15 +184,17 @@ class MainActivity : ComponentActivity() {
     var query by rememberSaveable { mutableStateOf("") }
     val shown = people.filter { it.name.contains(query.trim(), true) }
     Scaffold(topBar = { AppHeader("People", "All accounts") }) { padding -> Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Search people") }, singleLine = true)
-        Spacer(Modifier.height(14.dp))
-        if (shown.isEmpty()) Empty(if (query.isBlank()) "No people yet." else "No matching people.") else LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Search people") }, singleLine = true, shape = RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(16.dp))
+        if (shown.isEmpty()) Empty(if (query.isBlank()) "No people yet." else "No matching people.") else LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             items(shown, key = { it.id }) { p ->
                 GlassCard(Modifier.fillMaxWidth().clickable { open(p.id) }) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text("${p.entryCount} ${if (p.entryCount == 1L) "payment" else "payments"}", style = MaterialTheme.typography.bodySmall) }
-                        Text(money(p.total), fontWeight = FontWeight.Bold)
+                        Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Text(text = (p.name.firstOrNull()?.toString() ?: "P").uppercase(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onTertiaryContainer) }
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) { Text(p.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Text("${p.entryCount} ${if (p.entryCount == 1L) "payment" else "payments"}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Text(money(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -204,14 +206,14 @@ class MainActivity : ComponentActivity() {
     val history by vm.history.collectAsState()
     val groups = history.groupBy { day(it.createdAt) }
     Scaffold(topBar = { AppHeader("Daily history", "Payments grouped by day") }) { padding -> Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(14.dp))
-        if (history.isEmpty()) Empty("No payment history yet.") else LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(16.dp))
+        if (history.isEmpty()) Empty("No payment history yet.") else LazyColumn(contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             groups.forEach { (label, entries) -> item(label) {
                 GlassCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, fontWeight = FontWeight.Bold); Text(money(entries.sumOf { it.amount }), fontWeight = FontWeight.Bold) }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                        entries.forEach { tx -> Row(Modifier.fillMaxWidth().clickable { open(tx.personId) }.padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(tx.personName, fontWeight = FontWeight.Medium); Text(money(tx.amount), fontWeight = FontWeight.SemiBold) } }
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); Text(money(entries.sumOf { it.amount }), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        entries.forEach { tx -> Row(Modifier.fillMaxWidth().clickable { open(tx.personId) }.padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(tx.personName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium); Text(money(tx.amount), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold) } }
                     }
                 }
             } }
@@ -292,23 +294,20 @@ class MainActivity : ComponentActivity() {
 @Composable private fun EditDialog(tx: KhataTransaction, dismiss: () -> Unit, save: (Long, String) -> Unit) { var amount by remember { mutableStateOf(tx.amount.toString()) }; var note by remember { mutableStateOf(tx.note) }; var error by remember { mutableStateOf(false) }; AlertDialog(dismiss, title = { Text("Edit entry") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(amount, { amount = it.filter(Char::isDigit); error = false }, label = { Text("Amount") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)); OutlinedTextField(note, { note = it }, label = { Text("Note") }); if (error) Text("Enter an amount greater than zero.", color = MaterialTheme.colorScheme.error) } }, confirmButton = { TextButton({ val value = amount.toLongOrNull(); if (value == null || value <= 0) error = true else save(value, note) }) { Text("Save") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } }) }
 @Composable private fun AppHeader(title: String, subtitle: String) = Surface(
     modifier = Modifier.fillMaxWidth(),
-    shape = RectangleShape,
-    color = MaterialTheme.colorScheme.surface,
-    contentColor = MaterialTheme.colorScheme.onSurface,
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    tonalElevation = 0.dp,
-    shadowElevation = 0.dp
+    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+    color = MaterialTheme.colorScheme.primaryContainer,
+    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    shadowElevation = 8.dp
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp).padding(horizontal = 20.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(subtitle, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
-@Composable private fun GlassCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) = ElevatedCard(modifier, shape = RoundedCornerShape(12.dp)) { Column(content = content) }
-@Composable private fun SummaryCard(label: String, value: String, modifier: Modifier, color: Color? = null) = GlassCard(modifier) { Column(Modifier.padding(18.dp)) { Text(label, style = MaterialTheme.typography.labelMedium); Spacer(Modifier.height(6.dp)); Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color ?: LocalContentColor.current, maxLines = 1) } }
-@Composable private fun TransactionCard(tx: KhataTransaction, name: String?, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}) = GlassCard(modifier.fillMaxWidth()) { Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(name ?: money(tx.amount), style = MaterialTheme.typography.titleSmall); if (name != null) Text(money(tx.amount), fontWeight = FontWeight.SemiBold); if (tx.note.isNotBlank()) Text(tx.note, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis); Text(date(tx.createdAt), style = MaterialTheme.typography.labelSmall) }; Row(content = actions) } }
-@Composable private fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(28.dp), contentAlignment = Alignment.Center) { Text(text) }
+@Composable private fun GlassCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) = ElevatedCard(modifier, shape = RoundedCornerShape(16.dp), elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp), colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) { Column(content = content) }
+@Composable private fun SummaryCard(label: String, value: String, modifier: Modifier, color: Color? = null) = Card(modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = color?.copy(alpha = 0.1f) ?: MaterialTheme.colorScheme.secondaryContainer), border = BorderStroke(1.dp, color?.copy(alpha = 0.3f) ?: MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))) { Column(Modifier.padding(20.dp)) { Text(label, style = MaterialTheme.typography.labelLarge, color = color ?: MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)); Spacer(Modifier.height(8.dp)); Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = color ?: MaterialTheme.colorScheme.onSecondaryContainer, maxLines = 1) } }
+@Composable private fun TransactionCard(tx: KhataTransaction, name: String?, modifier: Modifier = Modifier, actions: @Composable RowScope.() -> Unit = {}) = Card(modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) { Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) { Box(modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Text(text = (name?.firstOrNull()?.toString() ?: "T").uppercase(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer) }; Spacer(Modifier.width(16.dp)); Column(Modifier.weight(1f)) { Text(name ?: money(tx.amount), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold); if (name != null) Text(money(tx.amount), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary); if (tx.note.isNotBlank()) Text(tx.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(date(tx.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)) }; Row(content = actions) } }
+@Composable private fun Empty(text: String) = Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)); Spacer(Modifier.height(16.dp)); Text(text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
