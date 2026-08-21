@@ -80,6 +80,7 @@ class KhataViewModel(app: Application) : AndroidViewModel(app) {
     fun delete(tx: KhataTransaction) = viewModelScope.launch { dao.deleteTransaction(tx.id) }
     fun deletePerson(id: Long) = viewModelScope.launch { dao.deletePerson(id) }
     fun saveBudget(amount: Long) = viewModelScope.launch { dao.saveSettings(AppSettings(totalBudget = amount)) }
+    fun addToBudget(amount: Long) = viewModelScope.launch { dao.addToBudget(amount) }
     fun detail(id: Long) = dao.person(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     fun entries(id: Long) = dao.transactions(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
@@ -248,9 +249,10 @@ class MainActivity : ComponentActivity() {
 @Composable private fun Settings(vm: KhataViewModel, theme: String, setTheme: (String) -> Unit) {
     val budget by vm.budget.collectAsState()
     var editing by remember { mutableStateOf(false) }
+    var addingBudget by remember { mutableStateOf(false) }
     Scaffold(topBar = { AppHeader("Settings", "Personalise Digital Hisab") }) { padding -> Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
         Spacer(Modifier.height(16.dp))
-        GlassCard(Modifier.fillMaxWidth()) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Total budget", fontWeight = FontWeight.SemiBold); Text(money(budget ?: 0), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }; OutlinedButton({ editing = true }) { Text("Edit") } } }
+        GlassCard(Modifier.fillMaxWidth()) { Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text("Total budget", fontWeight = FontWeight.SemiBold); Text(money(budget ?: 0), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }; Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) { Button({ addingBudget = true }) { Text("Add amount") }; OutlinedButton({ editing = true }) { Text("Set total") } } } }
         Spacer(Modifier.height(18.dp))
         Text("Appearance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
@@ -259,6 +261,7 @@ class MainActivity : ComponentActivity() {
         GlassCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { Text("Currency", fontWeight = FontWeight.SemiBold); Text("$Currency · Pakistani Rupee", color = MaterialTheme.colorScheme.onSurfaceVariant); HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)); Text("About", fontWeight = FontWeight.SemiBold); Text("Private offline payment tracking", color = MaterialTheme.colorScheme.onSurfaceVariant) } }
     } }
     if (editing) BudgetDialog(budget ?: 0, { editing = false }) { vm.saveBudget(it); editing = false }
+    if (addingBudget) AddBudgetDialog({ addingBudget = false }) { vm.addToBudget(it); addingBudget = false }
 }
 
 @Composable private fun EntryForm(title: String, back: () -> Unit, fixedName: String? = null, save: (String, Long, String) -> Unit) {
@@ -285,6 +288,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable private fun BudgetDialog(current: Long, dismiss: () -> Unit, save: (Long) -> Unit) { var input by remember { mutableStateOf(if (current == 0L) "" else current.toString()) }; var error by remember { mutableStateOf(false) }; AlertDialog({ dismiss() }, title = { Text("Set total budget") }, text = { Column { OutlinedTextField(input, { input = it.filter(Char::isDigit); error = false }, label = { Text("Budget (PKR)") }, prefix = { Text("$Currency ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)); if (error) Text("Enter a valid budget.", color = MaterialTheme.colorScheme.error) } }, confirmButton = { TextButton({ val value = input.toLongOrNull(); if (value == null) error = true else save(value) }) { Text("Save") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } }) }
+@Composable private fun AddBudgetDialog(dismiss: () -> Unit, add: (Long) -> Unit) { var input by remember { mutableStateOf("") }; var error by remember { mutableStateOf(false) }; AlertDialog({ dismiss() }, title = { Text("Add to total budget") }, text = { Column { Text("This amount will be added to your current total budget.", style = MaterialTheme.typography.bodySmall); Spacer(Modifier.height(12.dp)); OutlinedTextField(input, { input = it.filter(Char::isDigit); error = false }, label = { Text("Amount to add (PKR)") }, prefix = { Text("$Currency ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)); if (error) Text("Enter an amount greater than zero.", color = MaterialTheme.colorScheme.error) } }, confirmButton = { TextButton({ val value = input.toLongOrNull(); if (value == null || value <= 0) error = true else add(value) }) { Text("Add") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } }) }
 @Composable private fun EditDialog(tx: KhataTransaction, dismiss: () -> Unit, save: (Long, String) -> Unit) { var amount by remember { mutableStateOf(tx.amount.toString()) }; var note by remember { mutableStateOf(tx.note) }; var error by remember { mutableStateOf(false) }; AlertDialog(dismiss, title = { Text("Edit entry") }, text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(amount, { amount = it.filter(Char::isDigit); error = false }, label = { Text("Amount") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)); OutlinedTextField(note, { note = it }, label = { Text("Note") }); if (error) Text("Enter an amount greater than zero.", color = MaterialTheme.colorScheme.error) } }, confirmButton = { TextButton({ val value = amount.toLongOrNull(); if (value == null || value <= 0) error = true else save(value, note) }) { Text("Save") } }, dismissButton = { TextButton(dismiss) { Text("Cancel") } }) }
 @Composable private fun AppHeader(title: String, subtitle: String) = Surface(
     modifier = Modifier.fillMaxWidth(),

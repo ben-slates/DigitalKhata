@@ -62,6 +62,7 @@ interface KhataDao {
     @Query("SELECT COUNT(*) FROM people") fun peopleCount(): Flow<Int>
     @Query("SELECT totalBudget FROM app_settings WHERE id = 1") fun budget(): Flow<Long?>
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun saveSettings(settings: AppSettings)
+    @Query("UPDATE app_settings SET totalBudget = totalBudget + :amount WHERE id = 1") suspend fun increaseBudget(amount: Long): Int
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun addPerson(person: Person): Long
     @Insert suspend fun addTransaction(transaction: KhataTransaction): Long
     @Query("UPDATE transactions SET amount = :amount, note = :note WHERE id = :id") suspend fun updateTransaction(id: Long, amount: Long, note: String)
@@ -77,6 +78,11 @@ interface KhataDao {
             }
         }
         addTransaction(KhataTransaction(personId = personId, amount = amount, note = note.trim()))
+    }
+
+    @Transaction
+    suspend fun addToBudget(amount: Long) {
+        if (increaseBudget(amount) == 0) saveSettings(AppSettings(totalBudget = amount))
     }
     @Query("SELECT id FROM people WHERE lower(trim(name)) = lower(trim(:name)) LIMIT 1") suspend fun personIdByNormalizedName(name: String): Long?
 }
